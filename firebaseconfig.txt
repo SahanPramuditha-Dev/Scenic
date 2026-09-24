@@ -1,0 +1,8 @@
+
+  apiKey: "AIzaSyDuhqcVj403mBUergF2z2awWABGDJfnJjY",
+  authDomain: "scenic-6dd6f.firebaseapp.com",
+  projectId: "scenic-6dd6f",
+  storageBucket: "scenic-6dd6f.firebasestorage.app",
+  messagingSenderId: "808085383534",
+  appId: "1:808085383534:web:ca55391934b2946ec9397f",
+  measurementId: "G-XM3V4CPZHF"
