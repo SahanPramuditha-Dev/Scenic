@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { signInWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
+import { signInWithEmailAndPassword, signInWithPopup, sendPasswordResetEmail } from 'firebase/auth';
 import { auth, googleProvider } from '../lib/firebase';
 import { useNavigate, Link } from 'react-router-dom';
-import { Mail, Lock, Eye, EyeOff, Film, Tv, PlaySquare, List, Play, AlertCircle } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, Film, Tv, PlaySquare, List, Play, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export default function LoginPage() {
@@ -11,11 +11,13 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
   const navigate = useNavigate();
 
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
+    setSuccessMsg('');
     setIsLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email, password);
@@ -32,8 +34,31 @@ export default function LoginPage() {
     }
   };
 
+  const handleResetPassword = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    setErrorMsg('');
+    setSuccessMsg('');
+    if (!email) {
+      setErrorMsg('Please enter your email address first to reset your password.');
+      return;
+    }
+    
+    try {
+      await sendPasswordResetEmail(auth, email);
+      setSuccessMsg('Password reset email sent! Check your inbox.');
+    } catch (error: any) {
+      console.error("Reset password failed:", error);
+      if (error.code === 'auth/user-not-found') {
+        setErrorMsg('No account found with this email.');
+      } else {
+        setErrorMsg('Failed to send reset email. Please try again.');
+      }
+    }
+  };
+
   const handleGoogleLogin = async () => {
     setErrorMsg('');
+    setSuccessMsg('');
     try {
       await signInWithPopup(auth, googleProvider);
       navigate('/home');
@@ -49,81 +74,48 @@ export default function LoginPage() {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -10 }}
       transition={{ duration: 0.3 }}
-      className="min-h-screen flex items-center justify-center bg-[#0a0a0a] p-4 font-sans text-white"
+      className="min-h-screen flex items-center justify-center bg-[#131316] p-4 font-sans text-zinc-100"
     >
-      <div className="w-full max-w-[1000px] min-h-[600px] bg-[#111111] rounded-2xl border border-white/10 flex overflow-hidden shadow-2xl">
+      <div className="w-full max-w-[1000px] min-h-[600px] bg-[#1c1c21] rounded-2xl border border-zinc-800/80 flex overflow-hidden shadow-2xl">
         
         {/* Left Side - Hero / Brand */}
-        <div className="hidden lg:flex w-[45%] relative bg-black overflow-hidden flex-col justify-between p-10 border-r border-white/5">
-          {/* Subtle Abstract Background Glow */}
-          <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-purple-600/20 rounded-full blur-[100px] -translate-x-1/2 -translate-y-1/2"></div>
-          <div className="absolute bottom-0 right-0 w-[400px] h-[400px] bg-blue-600/10 rounded-full blur-[80px] translate-x-1/3 translate-y-1/3"></div>
-
-          <div className="relative z-10">
-            <div className="flex items-center gap-3 mb-16">
-              <div className="w-9 h-9 bg-white rounded-lg flex items-center justify-center shadow-lg">
-                <Play className="w-5 h-5 text-black fill-black ml-0.5" />
-              </div>
-              <span className="text-white text-xl font-bold tracking-tight">Scenic</span>
-            </div>
-
-            <div className="space-y-4">
-              <h1 className="text-4xl font-semibold text-white leading-tight tracking-tight">
-                Track every <br/>
-                <span className="text-white/60">
-                  story you love.
-                </span>
-              </h1>
-              <p className="text-white/50 text-sm leading-relaxed max-w-[280px]">
-                Your personal cinematic universe. Build watchlists, rate media, and never lose your place.
-              </p>
-            </div>
-          </div>
-
-          <div className="relative z-10 flex gap-6 mt-8">
-            <div className="flex flex-col items-center gap-2 text-white/40 hover:text-white/80 transition-colors">
-              <Film className="w-5 h-5" />
-              <span className="text-[10px] font-medium tracking-wider uppercase">Movies</span>
-            </div>
-            <div className="flex flex-col items-center gap-2 text-white/40 hover:text-white/80 transition-colors">
-              <Tv className="w-5 h-5" />
-              <span className="text-[10px] font-medium tracking-wider uppercase">Series</span>
-            </div>
-            <div className="flex flex-col items-center gap-2 text-white/40 hover:text-white/80 transition-colors">
-              <PlaySquare className="w-5 h-5" />
-              <span className="text-[10px] font-medium tracking-wider uppercase">Anime</span>
-            </div>
-            <div className="flex flex-col items-center gap-2 text-white/40 hover:text-white/80 transition-colors">
-              <List className="w-5 h-5" />
-              <span className="text-[10px] font-medium tracking-wider uppercase">Lists</span>
-            </div>
-          </div>
+        <div 
+          className="hidden lg:flex w-[45%] relative overflow-hidden flex-col justify-between p-10 border-r border-zinc-800/80 bg-cover bg-center"
+          style={{ backgroundImage: "url('/images/SigninPagePortrait.png')" }}
+        >
         </div>
 
         {/* Right Side - Form */}
-        <div className="w-full lg:w-[55%] p-10 sm:p-14 flex flex-col justify-center relative bg-[#111111]">
+        <div className="w-full lg:w-[55%] p-10 sm:p-14 flex flex-col justify-center relative bg-[#1c1c21]">
           <div className="max-w-[360px] w-full mx-auto">
             <div className="mb-8 text-center lg:text-left">
-              <h2 className="text-2xl font-semibold text-white tracking-tight">Welcome back</h2>
-              <p className="text-white/50 text-sm mt-1.5">Sign in to continue to Scenic</p>
+              <h2 className="text-2xl font-semibold text-zinc-100 tracking-tight">Welcome back</h2>
+              <p className="text-zinc-400 text-sm mt-1.5">Sign in to continue to Scenic</p>
             </div>
 
             {errorMsg && (
               <div className="mb-6 p-3 bg-red-500/10 border border-red-500/20 rounded-lg flex items-start gap-3">
-                <AlertCircle className="w-5 h-5 text-red-500 mt-0.5 flex-shrink-0" />
-                <p className="text-sm text-red-500">{errorMsg}</p>
+                <AlertCircle className="w-5 h-5 text-red-400 mt-0.5 flex-shrink-0" />
+                <p className="text-sm text-red-400">{errorMsg}</p>
+              </div>
+            )}
+            
+            {successMsg && (
+              <div className="mb-6 p-3 bg-green-500/10 border border-green-500/20 rounded-lg flex items-start gap-3">
+                <CheckCircle2 className="w-5 h-5 text-green-400 mt-0.5 flex-shrink-0" />
+                <p className="text-sm text-green-400">{successMsg}</p>
               </div>
             )}
 
             <form onSubmit={handleEmailLogin} className="space-y-4">
               <div className="space-y-1.5">
-                <label className="text-[13px] font-medium text-white/70 ml-1">Email address</label>
+                <label className="text-[13px] font-medium text-zinc-400 ml-1">Email address</label>
                 <div className="relative">
-                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
                   <input
                     type="email"
                     placeholder="name@example.com"
-                    className="w-full pl-10 pr-4 py-2.5 bg-black/50 border border-white/10 rounded-lg focus:outline-none focus:border-white/30 focus:ring-1 focus:ring-white/30 text-white placeholder:text-white/30 text-sm transition-all"
+                    className="w-full pl-10 pr-4 py-2.5 bg-[#18181b] border border-zinc-800 rounded-lg focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-zinc-100 placeholder:text-zinc-600 text-sm transition-all"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
@@ -132,13 +124,13 @@ export default function LoginPage() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-[13px] font-medium text-white/70 ml-1">Password</label>
+                <label className="text-[13px] font-medium text-zinc-400 ml-1">Password</label>
                 <div className="relative">
-                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
                   <input
                     type={showPassword ? 'text' : 'password'}
                     placeholder="••••••••"
-                    className="w-full pl-10 pr-10 py-2.5 bg-black/50 border border-white/10 rounded-lg focus:outline-none focus:border-white/30 focus:ring-1 focus:ring-white/30 text-white placeholder:text-white/30 text-sm transition-all"
+                    className="w-full pl-10 pr-10 py-2.5 bg-[#18181b] border border-zinc-800 rounded-lg focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-zinc-100 placeholder:text-zinc-600 text-sm transition-all"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
@@ -146,7 +138,7 @@ export default function LoginPage() {
                   <button 
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/80 transition-colors"
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors"
                   >
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
@@ -155,33 +147,32 @@ export default function LoginPage() {
 
               <div className="flex items-center justify-between pt-2">
                 <label className="flex items-center gap-2 cursor-pointer group">
-                  <div className="w-4 h-4 rounded border border-white/20 bg-black/50 flex items-center justify-center group-hover:border-white/40 transition-colors">
+                  <div className="w-4 h-4 rounded border border-zinc-700 bg-[#18181b] flex items-center justify-center group-hover:border-zinc-500 transition-colors">
                     <input type="checkbox" className="opacity-0 absolute w-0 h-0" />
-                    {/* Add a check icon here conditionally if checked, omitted for brevity */}
                   </div>
-                  <span className="text-[13px] text-white/60 group-hover:text-white/90 transition-colors">Remember me</span>
+                  <span className="text-[13px] text-zinc-400 group-hover:text-zinc-200 transition-colors">Remember me</span>
                 </label>
-                <a href="#" className="text-[13px] text-white/60 hover:text-white transition-colors">Forgot password?</a>
+                <button type="button" onClick={handleResetPassword} className="text-[13px] text-indigo-400 hover:text-indigo-300 transition-colors font-medium">Forgot password?</button>
               </div>
 
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full py-2.5 px-4 bg-white hover:bg-white/90 text-black text-sm font-semibold rounded-lg transition-all mt-4 disabled:opacity-70"
+                className="w-full py-2.5 px-4 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold rounded-lg transition-all mt-4 disabled:opacity-70 shadow-[0_0_20px_-5px_rgba(79,70,229,0.3)]"
               >
                 {isLoading ? 'Signing in...' : 'Sign in'}
               </button>
             </form>
 
             <div className="flex items-center gap-3 my-6 opacity-60">
-              <div className="flex-1 h-px bg-white/10"></div>
-              <span className="text-[11px] text-white/40 uppercase tracking-widest">or</span>
-              <div className="flex-1 h-px bg-white/10"></div>
+              <div className="flex-1 h-px bg-zinc-800"></div>
+              <span className="text-[11px] text-zinc-500 uppercase tracking-widest">or</span>
+              <div className="flex-1 h-px bg-zinc-800"></div>
             </div>
 
             <button
               onClick={handleGoogleLogin}
-              className="w-full flex items-center justify-center gap-2.5 py-2.5 px-4 bg-[#1a1a1a] hover:bg-[#222222] border border-white/10 text-white text-sm font-medium rounded-lg transition-all"
+              className="w-full flex items-center justify-center gap-2.5 py-2.5 px-4 bg-[#27272a] hover:bg-[#3f3f46] border border-zinc-700/50 text-zinc-100 text-sm font-medium rounded-lg transition-all"
             >
               <svg className="w-4 h-4" viewBox="0 0 24 24">
                 <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
@@ -202,6 +193,6 @@ export default function LoginPage() {
           </div>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }

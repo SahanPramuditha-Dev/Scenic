@@ -5,6 +5,7 @@ import { AuthProvider } from './components/AuthProvider';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import HomePage from './pages/HomePage';
+import MediaDetailPage from './pages/MediaDetailPage';
 import { useAuthStore } from './stores/useAuth';
 
 const queryClient = new QueryClient();
@@ -42,6 +43,13 @@ function AnimatedRoutes() {
             <HomePage />
           </ProtectedRoute>
         } />
+        
+        <Route path="/media/:mediaType/:id" element={
+          <ProtectedRoute>
+            <MediaDetailPage />
+          </ProtectedRoute>
+        } />
+
         <Route path="/onboarding" element={
           <ProtectedRoute>
             <div className="flex items-center justify-center h-screen bg-[#0a0a0a] text-white">

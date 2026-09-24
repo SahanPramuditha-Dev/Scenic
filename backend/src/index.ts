@@ -12,9 +12,11 @@ app.use(express.json());
 
 import usersRoutes from './modules/users/users.routes';
 import mediaRoutes from './modules/media/media.routes';
+import trackingRoutes from './modules/tracking/tracking.routes';
 
 app.use('/api/v1/users', usersRoutes);
 app.use('/api/v1/media', mediaRoutes);
+app.use('/api/v1/tracking', trackingRoutes);
 
 
 app.get('/api/v1/health', (req, res) => {

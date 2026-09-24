@@ -28,3 +28,17 @@ export const searchMedia = async (req: Request, res: Response) => {
     return res.status(500).json({ error: 'Failed to search media' });
   }
 };
+
+export const getDetails = async (req: Request, res: Response) => {
+  try {
+    const { mediaType, id } = req.params;
+    if (mediaType !== 'movie' && mediaType !== 'tv') {
+      return res.status(400).json({ error: 'mediaType must be movie or tv' });
+    }
+    const details = await TmdbService.getDetails(parseInt(id, 10), mediaType as 'movie' | 'tv');
+    return res.json(details);
+  } catch (error: any) {
+    console.error('Error fetching details:', error.message);
+    return res.status(500).json({ error: 'Failed to fetch details' });
+  }
+};

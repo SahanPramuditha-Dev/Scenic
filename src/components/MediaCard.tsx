@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import type { CanonicalMedia } from '../lib/types';
 
 interface MediaCardProps {
@@ -10,7 +11,7 @@ export function MediaCard({ media }: MediaCardProps) {
     : 'https://via.placeholder.com/500x750?text=No+Poster';
 
   return (
-    <div className="group relative overflow-hidden rounded-xl aspect-[2/3] bg-zinc-900 border border-zinc-800 transition-transform hover:scale-105 cursor-pointer">
+    <Link to={`/media/${media.mediaType}/${media.tmdbId}`} className="group relative overflow-hidden rounded-xl aspect-[2/3] bg-zinc-900 border border-zinc-800 transition-transform hover:scale-105 block">
       <img 
         src={imageUrl} 
         alt={media.title} 
@@ -21,6 +22,6 @@ export function MediaCard({ media }: MediaCardProps) {
         <h3 className="text-white font-bold text-lg leading-tight line-clamp-2">{media.title}</h3>
         <p className="text-zinc-300 text-sm mt-1 capitalize">{media.mediaType} • {media.voteAverage.toFixed(1)}/10</p>
       </div>
-    </div>
+    </Link>
   );
 }

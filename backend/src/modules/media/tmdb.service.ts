@@ -22,6 +22,9 @@ export interface CanonicalMedia {
   mediaType: 'movie' | 'tv';
   releaseDate: string | null;
   voteAverage: number;
+  runtime?: number;
+  genres?: { id: number; name: string }[];
+  cast?: { id: number; name: string; character: string; profilePath: string | null }[];
 }
 
 // Helper to format TMDB response into our Canonical format
@@ -37,6 +40,8 @@ const formatTmdbToCanonical = (item: any, defaultType: 'movie' | 'tv'): Canonica
     mediaType: item.media_type || defaultType,
     releaseDate: item.release_date || item.first_air_date || null,
     voteAverage: item.vote_average,
+    runtime: item.runtime || (item.episode_run_time ? item.episode_run_time[0] : null),
+    genres: item.genres,
   };
 };
 
@@ -56,7 +61,21 @@ export const TmdbService = {
   },
 
   async getDetails(tmdbId: number, mediaType: 'movie' | 'tv') {
-    const response = await tmdbApi.get(`/${mediaType}/${tmdbId}`);
-    return formatTmdbToCanonical(response.data, mediaType);
+    const response = await tmdbApi.get(`/${mediaType}/${tmdbId}`, {
+      params: { append_to_response: 'credits' }
+    });
+    
+    const canonical = formatTmdbToCanonical(response.data, mediaType);
+    
+    if (response.data.credits && response.data.credits.cast) {
+      canonical.cast = response.data.credits.cast.slice(0, 10).map((c: any) => ({
+        id: c.id,
+        name: c.name,
+        character: c.character,
+        profilePath: c.profile_path
+      }));
+    }
+    
+    return canonical;
   }
 };
