@@ -6,6 +6,31 @@ More than a generic movie tracker, Scenic is built on the philosophy of **Track 
 
 ---
 
+## 📸 Gallery
+
+<details>
+<summary><b>View Screenshots</b></summary>
+<br/>
+
+**Home Dashboard**
+![Home Dashboard](./screenshots/01-home-dashboard.png)
+
+**Media Details**
+![Media Detail](./screenshots/02-media-detail.png)
+
+**Trending Grid**
+![Trending Grid](./screenshots/03-trending-grid.png)
+
+**Authentication**
+![Authentication](./screenshots/04-authentication.png)
+
+**Registration**
+![Registration](./screenshots/05-registration.png)
+
+</details>
+
+---
+
 ## The Philosophy
 
 ### 1. Track (What have I watched?)
