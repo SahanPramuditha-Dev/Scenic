@@ -237,13 +237,13 @@ Routes for community, admin, achievements, groups, Wrapped, people, characters, 
 
 ### Initial architecture: modular monolith
 
-Use one React application and one FastAPI backend organized by domain. Do not begin with microservices. Heavy and scheduled work runs through workers, but shares domain code and database contracts with the API.
+Use one React application and one Node.js/Express/TypeScript backend organized by domain, with Prisma for PostgreSQL access. Do not begin with microservices. Heavy and scheduled work runs through Node.js workers that share domain code and database contracts with the API. Python is reserved for optional, later ML services.
 
 ```text
 React + TypeScript + Vite
           │ HTTPS / JSON
           ▼
-FastAPI modular monolith
+Node.js/Express modular monolith
   ├─ Identity and access
   ├─ Catalog aggregation
   ├─ Tracking and library
@@ -295,13 +295,15 @@ Recommended frontend foundations:
 
 ```text
 backend/
-  app/
-    api/            transport, validation, dependency wiring
-    domains/        business modules
+  src/
+    index.ts        server entry point and route mounting
+    modules/        domain routes, validation, services, repositories
     integrations/   metadata, streaming, email, push providers
     jobs/           scheduled and queue-driven tasks
-    core/           config, security, telemetry, shared errors
-    db/             session, migrations, shared database utilities
+    config/         environment, security, telemetry, Prisma client
+  prisma/
+    schema.prisma   database schema
+    migrations/     versioned database changes
   tests/
 ```
 
@@ -309,12 +311,13 @@ Each domain owns its models, schemas, repository/query layer, service rules, and
 
 Recommended backend foundations:
 
-- FastAPI and Pydantic
-- SQLAlchemy 2 and Alembic
+- Node.js, Express, and TypeScript
+- Runtime request/response validation with a TypeScript schema library
+- Prisma ORM and Prisma Migrate
 - PostgreSQL
 - Redis for rate limits, caching, locks, and queue coordination
-- A Python worker system selected during implementation spike
-- Pytest, contract tests, and integration tests against PostgreSQL
+- A Node.js worker/queue system selected during implementation spike
+- Vitest or another Node.js test runner, contract tests, and integration tests against PostgreSQL
 
 ### API style
 
@@ -324,7 +327,7 @@ Recommended backend foundations:
 - Idempotency keys for watch logging and other retry-prone mutations
 - Optimistic concurrency or version checks for progress updates
 - Standard problem-details error envelope
-- OpenAPI is the contract source for generated client types
+- An OpenAPI specification for the Express API is the contract source for generated client types
 - WebSockets or server-sent events only when a demonstrated real-time use case appears
 
 ## 7. Data Architecture

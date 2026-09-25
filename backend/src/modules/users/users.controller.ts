@@ -1,6 +1,19 @@
 import { Request, Response } from 'express';
 import prisma from '../../config/prisma';
 
+export async function getOrCreateUser(firebaseUser: NonNullable<Request['user']>) {
+  return prisma.user.upsert({
+    where: { firebaseUid: firebaseUser.uid },
+    update: {},
+    create: {
+      firebaseUid: firebaseUser.uid,
+      email: firebaseUser.email || null,
+      displayName: firebaseUser.name || null,
+      avatarUrl: firebaseUser.picture || null,
+    },
+  });
+}
+
 export const getCurrentUser = async (req: Request, res: Response) => {
   const firebaseUser = req.user;
 
@@ -9,21 +22,7 @@ export const getCurrentUser = async (req: Request, res: Response) => {
   }
 
   try {
-    let user = await prisma.user.findUnique({
-      where: { firebaseUid: firebaseUser.uid },
-    });
-
-    // Auto-register if user doesn't exist yet
-    if (!user) {
-      user = await prisma.user.create({
-        data: {
-          firebaseUid: firebaseUser.uid,
-          email: firebaseUser.email,
-          displayName: firebaseUser.name || null,
-          avatarUrl: firebaseUser.picture || null,
-        },
-      });
-    }
+    const user = await getOrCreateUser(firebaseUser);
 
     return res.json({
       id: user.id,

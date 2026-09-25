@@ -1,75 +1,88 @@
-# React + TypeScript + Vite
+# Scenic
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+**Scenic is a Personal Entertainment Operating System.** 
 
-Currently, two official plugins are available:
+More than a generic movie tracker, Scenic is built on the philosophy of **Track → Understand → Decide**. It meticulously records your watch history, builds a deep "Personal Entertainment Graph" from your taste, and uses intelligent decision engines to answer the hardest question in modern streaming: *"What should I watch next?"*
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+---
 
-## React Compiler
+## The Philosophy
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### 1. Track (What have I watched?)
+Scenic goes beyond basic watchlists. It tracks complex relationships:
+- **Media:** Movies, TV Series, Anime.
+- **Granular Progress:** Series completion rates, exact seasons/episodes watched.
+- **Franchises & Collections:** Tracks your completion of Universes (e.g., Marvel Cinematic Universe), Franchises (Star Wars), and Directors (Christopher Nolan).
+- **Time-based Analytics:** When you watched, rewatch cycles, and longest binges.
 
-## Expanding the ESLint configuration
+### 2. Understand (What do I actually enjoy?)
+Raw data is converted into actionable taste signals:
+- **Hierarchical Genres:** Understanding you like "Cyberpunk" and "Space Opera", not just generic "Sci-Fi".
+- **Studio & Cast Affinity:** Tracking which actors and studios you consistently rate the highest.
+- **Backlog Analytics:** Identifying how long items sit in your watchlist and completion rates by genre.
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### 3. Decide (What should I watch next?)
+The Intelligence Engine powers your night:
+- **Decision Wizard:** Filter by Mood, Available Time, and Solo/Group watching.
+- **"What Am I Missing?":** Instantly find remaining unwatched titles in a beloved franchise.
+- **Smart Queue & Surprise Me:** Intelligent, weighted suggestions rather than pure random selections.
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+---
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+## 🛠 Tech Stack & Architecture
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+- **Frontend:** React, TypeScript, Vite, Tailwind CSS, Framer Motion, Zustand.
+- **Backend:** Node.js, Express, TypeScript.
+- **Database:** PostgreSQL (via Prisma ORM).
+- **Authentication:** Firebase (Email + Google Auth) synced with Postgres JWTs.
+- **Catalog Data:** The Movie Database (TMDB) v3 API.
 
-```
+---
 
-You can also install [eslint-plugin-react-x](https://npmx.dev/package/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://npmx.dev/package/eslint-plugin-react-dom) for React-specific lint rules:
+## 📚 Project Documentation
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+For contributors and AI agents working on this project, please refer to the core documentation files in the root directory:
+- [`PROJECT.md`](./PROJECT.md) - High-level overview, tech stack, and critical local environment quirks.
+- [`PROJECT_PLAN.md`](./PROJECT_PLAN.md) - The master roadmap spanning Phase 0 to Phase 7+.
+- [`PROJECT_PHASE.md`](./PROJECT_PHASE.md) - Details on the *current* development sprint and immediate tasks.
+- [`API_CONTRACTS.md`](./API_CONTRACTS.md) - REST API documentation and payloads.
+- [`UI_UX_GUIDELINES.md`](./UI_UX_GUIDELINES.md) - Scenic's cinematic "Soft Dark" design system.
+- [`DATABASE_SCHEMA.md`](./DATABASE_SCHEMA.md) - Postgres schema and the Personal Entertainment Graph data model.
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+---
 
-```
+## 🚀 Local Setup Instructions
+
+1. **Install Dependencies**
+   Run `npm ci` in the repository root, and `npm ci` inside the `backend/` directory.
+   
+2. **Environment Variables**
+   Copy `.env.example` to `.env` (frontend) and `backend/.env.example` to `backend/.env` (backend). 
+   - Add your **TMDB v3 API Key** (32-character string).
+   - Add your Firebase configuration keys.
+
+3. **Start the Database**
+   Start PostgreSQL via Docker. (Note: Scenic maps Postgres to local port `5433` to avoid conflicts with native Windows Postgres instances).
+   ```bash
+   docker compose up -d db
+   ```
+
+4. **Initialize Prisma (Crucial)**
+   Always run Prisma commands locally in the backend folder to bypass global v8 conflicts:
+   ```bash
+   cd backend
+   npx prisma generate
+   npx prisma db push
+   ```
+
+5. **Start the Development Servers**
+   In the `backend/` directory, start the API:
+   ```bash
+   npm run dev
+   ```
+   In the repository root, start the Vite frontend:
+   ```bash
+   npm run dev
+   ```
+
+*(Note: The backend development script uses `NODE_TLS_REJECT_UNAUTHORIZED=0` to bypass SSL certificate errors common on local Windows environments when connecting to TMDB).*

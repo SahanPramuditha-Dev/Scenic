@@ -3,15 +3,25 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Play, Plus, Check, Star, Clock, Calendar } from 'lucide-react';
 import { useAuthStore } from '../stores/useAuth';
+import type { CanonicalMedia } from '../lib/types';
+import { useQueryClient } from '@tanstack/react-query';
+
+type MediaDetails = CanonicalMedia & {
+  runtime?: number;
+  genres?: { id: number; name: string }[];
+  cast?: { id: number; name: string; character: string; profilePath: string | null }[];
+};
 
 export default function MediaDetailPage() {
   const { mediaType, id } = useParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { user } = useAuthStore();
-  const [media, setMedia] = useState<any>(null);
+  const [media, setMedia] = useState<MediaDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [inWatchlist, setInWatchlist] = useState(false);
   const [isWatched, setIsWatched] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   useEffect(() => {
     const fetchDetails = async () => {
@@ -20,27 +30,31 @@ export default function MediaDetailPage() {
         const res = await fetch(`/api/v1/media/${mediaType}/${id}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
-        const data = await res.json();
+        if (!res.ok) throw new Error('Failed to load media');
+        const data: MediaDetails = await res.json();
         setMedia(data);
         
         // Also fetch watchlist and history status to see if it's already added
         // (In a full app we'd fetch the user's lists and store in Zustand, but we can query them directly here for now)
         if (user?.uid) {
-          const wlRes = await fetch(`/api/v1/tracking/watchlist/${user.uid}`, {
+          const wlRes = await fetch('/api/v1/tracking/watchlist', {
              headers: { Authorization: `Bearer ${token}` }
           });
-          const wlData = await wlRes.json();
-          setInWatchlist(wlData.some((item: any) => item.tmdbId === data.tmdbId && item.mediaType === data.mediaType));
+          if (!wlRes.ok) throw new Error('Failed to load watchlist');
+          const wlData: { tmdbId: number; mediaType: string }[] = await wlRes.json();
+          setInWatchlist(wlData.some((item) => item.tmdbId === data.tmdbId && item.mediaType === data.mediaType));
           
-          const histRes = await fetch(`/api/v1/tracking/history/${user.uid}`, {
+          const histRes = await fetch('/api/v1/tracking/history', {
              headers: { Authorization: `Bearer ${token}` }
           });
-          const histData = await histRes.json();
-          setIsWatched(histData.some((item: any) => item.tmdbId === data.tmdbId && item.mediaType === data.mediaType));
+          if (!histRes.ok) throw new Error('Failed to load history');
+          const histData: { tmdbId: number; mediaType: string }[] = await histRes.json();
+          setIsWatched(histData.some((item) => item.tmdbId === data.tmdbId && item.mediaType === data.mediaType));
         }
 
       } catch (e) {
         console.error("Failed to fetch media details", e);
+        setErrorMessage('Failed to load media details. Please try again.');
       } finally {
         setIsLoading(false);
       }
@@ -54,22 +68,27 @@ export default function MediaDetailPage() {
       const token = await user.getIdToken();
       
       if (inWatchlist) {
-        await fetch('/api/v1/tracking/watchlist', {
+        const response = await fetch('/api/v1/tracking/watchlist', {
           method: 'DELETE',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ userId: user.uid, tmdbId: media.tmdbId, mediaType: media.mediaType })
+          body: JSON.stringify({ tmdbId: media.tmdbId, mediaType: media.mediaType })
         });
+        if (!response.ok) throw new Error('Failed to remove from watchlist');
         setInWatchlist(false);
+        void queryClient.invalidateQueries({ queryKey: ['library'] });
       } else {
-        await fetch('/api/v1/tracking/watchlist', {
+        const response = await fetch('/api/v1/tracking/watchlist', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ userId: user.uid, tmdbId: media.tmdbId, mediaType: media.mediaType })
+          body: JSON.stringify({ tmdbId: media.tmdbId, mediaType: media.mediaType })
         });
+        if (!response.ok) throw new Error('Failed to add to watchlist');
         setInWatchlist(true);
+        void queryClient.invalidateQueries({ queryKey: ['library'] });
       }
     } catch (e) {
       console.error(e);
+      setErrorMessage('Could not update watchlist. Please try again.');
     }
   };
 
@@ -78,16 +97,19 @@ export default function MediaDetailPage() {
     try {
       const token = await user.getIdToken();
       if (!isWatched) {
-        await fetch('/api/v1/tracking/history', {
+        const response = await fetch('/api/v1/tracking/history', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ userId: user.uid, tmdbId: media.tmdbId, mediaType: media.mediaType })
+          body: JSON.stringify({ tmdbId: media.tmdbId, mediaType: media.mediaType })
         });
+        if (!response.ok) throw new Error('Failed to add to history');
         setIsWatched(true);
+        void queryClient.invalidateQueries({ queryKey: ['library'] });
         // Usually, if you watch it, you might want to remove it from watchlist, but we'll keep it simple
       }
     } catch (e) {
       console.error(e);
+      setErrorMessage('Could not update watch history. Please try again.');
     }
   };
 
@@ -99,7 +121,7 @@ export default function MediaDetailPage() {
     );
   }
 
-  if (!media) return <div className="min-h-screen bg-[#131316] text-white flex items-center justify-center">Not found</div>;
+  if (!media) return <div className="min-h-screen bg-[#131316] text-white flex items-center justify-center">{errorMessage || 'Not found'}</div>;
 
   const backdropUrl = media.backdropPath ? `https://image.tmdb.org/t/p/original${media.backdropPath}` : null;
   const posterUrl = media.posterPath ? `https://image.tmdb.org/t/p/w500${media.posterPath}` : null;
@@ -145,6 +167,7 @@ export default function MediaDetailPage() {
 
           {/* Details */}
           <div className="flex-1 pt-4">
+            {errorMessage && <p role="alert" className="mb-4 text-red-400">{errorMessage}</p>}
             <h1 className="text-5xl font-bold tracking-tight mb-2">{media.title}</h1>
             {media.originalTitle && media.originalTitle !== media.title && (
               <p className="text-zinc-500 text-lg mb-4">{media.originalTitle}</p>
@@ -215,7 +238,7 @@ export default function MediaDetailPage() {
             {media.genres && media.genres.length > 0 && (
               <div className="mb-10">
                 <div className="flex flex-wrap gap-2">
-                  {media.genres.map((g: any) => (
+                  {media.genres.map((g) => (
                     <span key={g.id} className="px-3 py-1 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-zinc-400">
                       {g.name}
                     </span>
@@ -228,7 +251,7 @@ export default function MediaDetailPage() {
               <div>
                 <h3 className="text-xl font-semibold mb-4 text-zinc-200">Top Cast</h3>
                 <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
-                  {media.cast.map((actor: any) => (
+                  {media.cast.map((actor) => (
                     <div key={actor.id} className="w-[120px] shrink-0">
                       <div className="w-full aspect-[2/3] bg-zinc-800 rounded-lg mb-2 overflow-hidden border border-zinc-800/50">
                         {actor.profilePath ? (

@@ -2,8 +2,9 @@ import { useState } from 'react';
 import { signInWithEmailAndPassword, signInWithPopup, sendPasswordResetEmail } from 'firebase/auth';
 import { auth, googleProvider } from '../lib/firebase';
 import { useNavigate, Link } from 'react-router-dom';
-import { Mail, Lock, Eye, EyeOff, Film, Tv, PlaySquare, List, Play, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useAuthStore } from '../stores/useAuth';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -20,11 +21,13 @@ export default function LoginPage() {
     setSuccessMsg('');
     setIsLoading(true);
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      const credential = await signInWithEmailAndPassword(auth, email, password);
+      useAuthStore.getState().setUser(credential.user, await credential.user.getIdToken());
       navigate('/home');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Login failed:", error);
-      if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+      const code = error && typeof error === 'object' && 'code' in error ? error.code : undefined;
+      if (code === 'auth/invalid-credential' || code === 'auth/user-not-found' || code === 'auth/wrong-password') {
         setErrorMsg('Invalid email or password.');
       } else {
         setErrorMsg('Failed to sign in. Please try again.');
@@ -46,9 +49,10 @@ export default function LoginPage() {
     try {
       await sendPasswordResetEmail(auth, email);
       setSuccessMsg('Password reset email sent! Check your inbox.');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Reset password failed:", error);
-      if (error.code === 'auth/user-not-found') {
+      const code = error && typeof error === 'object' && 'code' in error ? error.code : undefined;
+      if (code === 'auth/user-not-found') {
         setErrorMsg('No account found with this email.');
       } else {
         setErrorMsg('Failed to send reset email. Please try again.');
@@ -60,7 +64,8 @@ export default function LoginPage() {
     setErrorMsg('');
     setSuccessMsg('');
     try {
-      await signInWithPopup(auth, googleProvider);
+      const credential = await signInWithPopup(auth, googleProvider);
+      useAuthStore.getState().setUser(credential.user, await credential.user.getIdToken());
       navigate('/home');
     } catch (error) {
       console.error("Google login failed:", error);
@@ -78,11 +83,12 @@ export default function LoginPage() {
     >
       <div className="w-full max-w-[1000px] min-h-[600px] bg-[#1c1c21] rounded-2xl border border-zinc-800/80 flex overflow-hidden shadow-2xl">
         
-        {/* Left Side - Hero / Brand */}
+        {/* Left Side - Hero Image */}
         <div 
-          className="hidden lg:flex w-[45%] relative overflow-hidden flex-col justify-between p-10 border-r border-zinc-800/80 bg-cover bg-center"
+          className="hidden lg:block w-[45%] relative overflow-hidden bg-cover bg-center border-r border-zinc-800/80"
           style={{ backgroundImage: "url('/images/SigninPagePortrait.png')" }}
         >
+          {/* The image itself contains all the branding, text, and icons */}
         </div>
 
         {/* Right Side - Form */}

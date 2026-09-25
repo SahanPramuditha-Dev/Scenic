@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { createUserWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
 import { auth, googleProvider } from '../lib/firebase';
 import { useNavigate, Link } from 'react-router-dom';
-import { Mail, Lock, Eye, EyeOff, Film, Tv, PlaySquare, List, Play, AlertCircle } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useAuthStore } from '../stores/useAuth';
 
 export default function RegisterPage() {
   const [email, setEmail] = useState('');
@@ -12,18 +13,13 @@ export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
-  const [passwordStrength, setPasswordStrength] = useState(0);
+  const passwordStrength = [
+    password.length > 5,
+    password.length > 8,
+    /[A-Z]/.test(password),
+    /[0-9]/.test(password) || /[^A-Za-z0-9]/.test(password),
+  ].filter(Boolean).length * 25;
   const navigate = useNavigate();
-
-  // Calculate password strength
-  useEffect(() => {
-    let strength = 0;
-    if (password.length > 5) strength += 25;
-    if (password.length > 8) strength += 25;
-    if (/[A-Z]/.test(password)) strength += 25;
-    if (/[0-9]/.test(password) || /[^A-Za-z0-9]/.test(password)) strength += 25;
-    setPasswordStrength(strength);
-  }, [password]);
 
   const getStrengthColor = () => {
     if (passwordStrength < 50) return 'bg-red-500';
@@ -54,11 +50,13 @@ export default function RegisterPage() {
     
     setIsLoading(true);
     try {
-      await createUserWithEmailAndPassword(auth, email, password);
+      const credential = await createUserWithEmailAndPassword(auth, email, password);
+      useAuthStore.getState().setUser(credential.user, await credential.user.getIdToken());
       navigate('/home'); // Skip onboarding for now
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Registration failed:", error);
-      if (error.code === 'auth/email-already-in-use') {
+      const code = error && typeof error === 'object' && 'code' in error ? error.code : undefined;
+      if (code === 'auth/email-already-in-use') {
         setErrorMsg('This email is already in use.');
       } else {
         setErrorMsg('Failed to create account. Please try again.');
@@ -71,7 +69,8 @@ export default function RegisterPage() {
   const handleGoogleLogin = async () => {
     setErrorMsg('');
     try {
-      await signInWithPopup(auth, googleProvider);
+      const credential = await signInWithPopup(auth, googleProvider);
+      useAuthStore.getState().setUser(credential.user, await credential.user.getIdToken());
       navigate('/home'); // Skip onboarding for now
     } catch (error) {
       console.error("Google login failed:", error);
@@ -89,11 +88,12 @@ export default function RegisterPage() {
     >
       <div className="w-full max-w-[1000px] min-h-[600px] bg-[#1c1c21] rounded-2xl border border-zinc-800/80 flex overflow-hidden shadow-2xl">
         
-        {/* Left Side - Hero / Brand */}
+        {/* Left Side - Hero Image */}
         <div 
-          className="hidden lg:flex w-[45%] relative overflow-hidden flex-col justify-between p-10 border-r border-zinc-800/80 bg-cover bg-center"
+          className="hidden lg:block w-[45%] relative overflow-hidden bg-cover bg-center border-r border-zinc-800/80"
           style={{ backgroundImage: "url('/images/SigninPagePortrait.png')" }}
         >
+          {/* The image itself contains all the branding, text, and icons */}
         </div>
 
         {/* Right Side - Form */}

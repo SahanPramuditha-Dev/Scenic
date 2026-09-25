@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { useAuthStore } from '../stores/useAuth';
+import { auth } from '../lib/firebase';
 
 export const api = axios.create({
   baseURL: '/api/v1',
@@ -9,8 +9,8 @@ export const api = axios.create({
 });
 
 api.interceptors.request.use(
-  (config) => {
-    const token = useAuthStore.getState().token;
+  async (config) => {
+    const token = await auth.currentUser?.getIdToken();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }

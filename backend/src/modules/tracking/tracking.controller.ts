@@ -1,119 +1,94 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../../config/prisma';
+import { getOrCreateUser } from '../users/users.controller';
 
-const prisma = new PrismaClient();
+function trackingInput(body: unknown): { tmdbId: number; mediaType: 'movie' | 'tv' } | null {
+  if (!body || typeof body !== 'object') return null;
+  const { tmdbId, mediaType } = body as Record<string, unknown>;
+  if (!Number.isSafeInteger(tmdbId) || (tmdbId as number) <= 0) return null;
+  if (mediaType !== 'movie' && mediaType !== 'tv') return null;
+  return { tmdbId: tmdbId as number, mediaType };
+}
 
-// WATCHLIST
+async function userId(req: Request): Promise<string> {
+  if (!req.user) throw new Error('Authentication middleware is required');
+  return (await getOrCreateUser(req.user)).id;
+}
 
 export const addToWatchlist = async (req: Request, res: Response) => {
+  const input = trackingInput(req.body);
+  if (!input) return res.status(400).json({ error: 'Valid tmdbId and mediaType are required' });
   try {
-    const { userId, tmdbId, mediaType } = req.body;
-    
-    if (!userId || !tmdbId || !mediaType) {
-      return res.status(400).json({ error: 'userId, tmdbId, and mediaType are required' });
-    }
-
-    // Check if already in watchlist
-    const existing = await prisma.watchlistItem.findUnique({
-      where: {
-        userId_tmdbId_mediaType: { userId, tmdbId, mediaType }
-      }
+    const ownerId = await userId(req);
+    const item = await prisma.watchlistItem.upsert({
+      where: { userId_tmdbId_mediaType: { userId: ownerId, ...input } },
+      update: {},
+      create: { userId: ownerId, ...input },
     });
-
-    if (existing) {
-      return res.status(200).json(existing);
-    }
-
-    const item = await prisma.watchlistItem.create({
-      data: { userId, tmdbId, mediaType }
-    });
-
-    res.status(201).json(item);
+    return res.status(200).json(item);
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Failed to add to watchlist' });
+    console.error('Failed to add to watchlist:', error);
+    return res.status(500).json({ error: 'Failed to add to watchlist' });
   }
 };
 
 export const removeFromWatchlist = async (req: Request, res: Response) => {
+  const input = trackingInput(req.body);
+  if (!input) return res.status(400).json({ error: 'Valid tmdbId and mediaType are required' });
   try {
-    const { userId, tmdbId, mediaType } = req.body;
-    
-    if (!userId || !tmdbId || !mediaType) {
-      return res.status(400).json({ error: 'userId, tmdbId, and mediaType are required' });
-    }
-
-    await prisma.watchlistItem.delete({
-      where: {
-        userId_tmdbId_mediaType: { userId, tmdbId, mediaType }
-      }
-    });
-
-    res.status(200).json({ success: true });
-  } catch (error: any) {
-    if (error.code === 'P2025') {
-      return res.status(404).json({ error: 'Item not found in watchlist' });
-    }
-    console.error(error);
-    res.status(500).json({ error: 'Failed to remove from watchlist' });
+    const ownerId = await userId(req);
+    const result = await prisma.watchlistItem.deleteMany({ where: { userId: ownerId, ...input } });
+    if (!result.count) return res.status(404).json({ error: 'Item not found in watchlist' });
+    return res.json({ success: true });
+  } catch (error) {
+    console.error('Failed to remove from watchlist:', error);
+    return res.status(500).json({ error: 'Failed to remove from watchlist' });
   }
 };
 
 export const getWatchlist = async (req: Request, res: Response) => {
   try {
-    const { userId } = req.params;
+    const ownerId = await userId(req);
     const items = await prisma.watchlistItem.findMany({
-      where: { userId },
-      orderBy: { addedAt: 'desc' }
+      where: { userId: ownerId }, orderBy: { addedAt: 'desc' },
     });
-    res.status(200).json(items);
+    return res.json(items);
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Failed to fetch watchlist' });
+    console.error('Failed to fetch watchlist:', error);
+    return res.status(500).json({ error: 'Failed to fetch watchlist' });
   }
 };
 
-// HISTORY
-
 export const addToHistory = async (req: Request, res: Response) => {
+  const input = trackingInput(req.body);
+  if (!input) return res.status(400).json({ error: 'Valid tmdbId and mediaType are required' });
+  const rating = (req.body as Record<string, unknown>).rating;
+  if (rating !== undefined && (!Number.isInteger(rating) || (rating as number) < 1 || (rating as number) > 10)) {
+    return res.status(400).json({ error: 'rating must be an integer from 1 to 10' });
+  }
   try {
-    const { userId, tmdbId, mediaType, rating } = req.body;
-    
-    if (!userId || !tmdbId || !mediaType) {
-      return res.status(400).json({ error: 'userId, tmdbId, and mediaType are required' });
-    }
-
-    // Upsert history item (so we update watchedAt if watched again, or update rating)
+    const ownerId = await userId(req);
     const item = await prisma.historyItem.upsert({
-      where: {
-        userId_tmdbId_mediaType: { userId, tmdbId, mediaType }
-      },
-      update: {
-        rating: rating !== undefined ? rating : undefined,
-        watchedAt: new Date()
-      },
-      create: {
-        userId, tmdbId, mediaType, rating
-      }
+      where: { userId_tmdbId_mediaType: { userId: ownerId, ...input } },
+      update: { rating: rating as number | undefined, watchedAt: new Date() },
+      create: { userId: ownerId, ...input, rating: rating as number | undefined },
     });
-
-    res.status(201).json(item);
+    return res.status(200).json(item);
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Failed to add to history' });
+    console.error('Failed to add to history:', error);
+    return res.status(500).json({ error: 'Failed to add to history' });
   }
 };
 
 export const getHistory = async (req: Request, res: Response) => {
   try {
-    const { userId } = req.params;
+    const ownerId = await userId(req);
     const items = await prisma.historyItem.findMany({
-      where: { userId },
-      orderBy: { watchedAt: 'desc' }
+      where: { userId: ownerId }, orderBy: { watchedAt: 'desc' },
     });
-    res.status(200).json(items);
+    return res.json(items);
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Failed to fetch history' });
+    console.error('Failed to fetch history:', error);
+    return res.status(500).json({ error: 'Failed to fetch history' });
   }
 };

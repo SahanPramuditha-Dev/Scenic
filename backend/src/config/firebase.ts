@@ -1,24 +1,18 @@
-import * as admin from 'firebase-admin';
+import 'dotenv/config';
+import { applicationDefault, cert, getApps, initializeApp } from 'firebase-admin/app';
 import path from 'path';
 import fs from 'fs';
 
 // Look for a service account key file
 const serviceAccountPath = path.resolve(__dirname, '../../firebase-service-account.json');
 
-try {
+if (getApps().length === 0) {
   if (fs.existsSync(serviceAccountPath)) {
-    const serviceAccount = require(serviceAccountPath);
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
-    });
-    console.log('🔥 Firebase Admin initialized with service account.');
+    initializeApp({ credential: cert(JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'))) });
+  } else if (process.env.FIREBASE_PROJECT_ID) {
+    // Verifying Firebase ID tokens only needs the project ID and Google's public keys.
+    initializeApp({ projectId: process.env.FIREBASE_PROJECT_ID });
   } else {
-    // If running in an environment with Google Application Default Credentials
-    admin.initializeApp();
-    console.log('🔥 Firebase Admin initialized with default credentials.');
+    initializeApp({ credential: applicationDefault() });
   }
-} catch (error) {
-  console.error('Error initializing Firebase Admin:', error);
 }
-
-export const firebaseAdmin = admin;
