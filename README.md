@@ -12,20 +12,20 @@ More than a generic movie tracker, Scenic is built on the philosophy of **Track 
 <summary><b>View Screenshots</b></summary>
 <br/>
 
-**Home Dashboard**
-![Home Dashboard](./screenshots/01-home-dashboard.png)
+**Home Page**
+![Home Page](./screenshots/03-home-page.png)
 
-**Media Details**
-![Media Detail](./screenshots/02-media-detail.png)
+**Library Page**
+![Library Page](./screenshots/05-library-page.png)
 
-**Trending Grid**
-![Trending Grid](./screenshots/03-trending-grid.png)
+**Search Page**
+![Search Page](./screenshots/04-search-page.png)
 
-**Authentication**
-![Authentication](./screenshots/04-authentication.png)
+**Login**
+![Login](./screenshots/01-login-page.png)
 
 **Registration**
-![Registration](./screenshots/05-registration.png)
+![Registration](./screenshots/02-register-page.png)
 
 </details>
 
