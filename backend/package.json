@@ -4,6 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "build": "prisma generate && tsc",
+    "start": "node --use-system-ca dist/index.js",
+    "migrate:deploy": "prisma migrate deploy",
     "dev": "node --use-system-ca --import tsx --watch src/index.ts",
     "prisma": "prisma",
     "test": "tsx --test tests/*.test.ts"

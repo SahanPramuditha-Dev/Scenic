@@ -1,113 +1,142 @@
 # Scenic
 
-**Scenic is a Personal Entertainment Operating System.** 
+Scenic brings movies, TV series, and anime into one personal entertainment library. Browse live catalogs, save titles, rate what you watch, and record your viewing progress.
 
-More than a generic movie tracker, Scenic is built on the philosophy of **Track → Understand → Decide**. It meticulously records your watch history, builds a deep "Personal Entertainment Graph" from your taste, and uses intelligent decision engines to answer the hardest question in modern streaming: *"What should I watch next?"*
+## Current features
 
----
+- Firebase email/password and Google sign-in, with authenticated Node API routes.
+- Live TMDB movie/TV trending, search, and detail pages.
+- Live AniList anime browsing, search, and detail pages; public catalog reads require no API key.
+- A combined watchlist and watching/history library, backed by PostgreSQL.
+- Movie / TV / Anime filters, sorting by recency, title, or personal rating, and direct removal.
+- Editable personal ratings from 1–10, TV season/episode position, and anime episode counts.
+- Responsive navigation, loading/error states, accessible cast scrolling, and save confirmations.
+- Versioned database migrations, health/readiness endpoints, structured request logs, and a React recovery screen.
 
-## 📸 Gallery
+Scenic does not host or stream media. Recommendations, taste analysis, franchise tracking, and advanced statistics remain roadmap work.
+
+## Screenshots
 
 <details>
-<summary><b>View Screenshots</b></summary>
-<br/>
+<summary>View the application gallery</summary>
 
-**Home Page**
-![Home Page](./screenshots/03-home-page.png)
+### Home
+![Home dashboard](screenshots/03-home-page.png)
 
-**Library Page**
-![Library Page](./screenshots/05-library-page.png)
+### Movies and TV search
+![Movie and TV search](screenshots/04-search-page.png)
 
-**Search Page**
-![Search Page](./screenshots/04-search-page.png)
+### Anime
+![AniList anime catalog](screenshots/06-anime-page.png)
 
-**Login**
-![Login](./screenshots/01-login-page.png)
+### Movie details
+![Movie details and tracking actions](screenshots/08-media-detail-page.png)
 
-**Registration**
-![Registration](./screenshots/02-register-page.png)
+### Library
+![Empty library with discovery actions](screenshots/05-library-page.png)
+
+### Ratings and episode progress
+![Library filters, ratings, and progress](screenshots/07-library-tracking.png)
+
+This view was captured during the signed-in verification workflow. Its temporary movie, TV, and anime tracking entries were removed afterward.
+
+### Sign in and registration
+![Sign in](screenshots/01-login-page.png)
+![Registration](screenshots/02-register-page.png)
 
 </details>
 
----
+## Stack
 
-## The Philosophy
+| Area | Technology |
+| --- | --- |
+| Frontend | React, TypeScript, Vite, Tailwind CSS, TanStack Query, Zustand, Framer Motion |
+| Backend | Node.js, Express, TypeScript |
+| Persistence | PostgreSQL and Prisma |
+| Authentication | Firebase Authentication and Firebase Admin token verification |
+| Catalogs | TMDB for movies/TV; AniList GraphQL for anime |
 
-### 1. Track (What have I watched?)
-Scenic goes beyond basic watchlists. It tracks complex relationships:
-- **Media:** Movies, TV Series, Anime.
-- **Granular Progress:** Series completion rates, exact seasons/episodes watched.
-- **Franchises & Collections:** Tracks your completion of Universes (e.g., Marvel Cinematic Universe), Franchises (Star Wars), and Directors (Christopher Nolan).
-- **Time-based Analytics:** When you watched, rewatch cycles, and longest binges.
+## Local setup
 
-### 2. Understand (What do I actually enjoy?)
-Raw data is converted into actionable taste signals:
-- **Hierarchical Genres:** Understanding you like "Cyberpunk" and "Space Opera", not just generic "Sci-Fi".
-- **Studio & Cast Affinity:** Tracking which actors and studios you consistently rate the highest.
-- **Backlog Analytics:** Identifying how long items sit in your watchlist and completion rates by genre.
+Use **Node.js 24+** and PostgreSQL. Docker Compose provides a local PostgreSQL service on port **5433**.
 
-### 3. Decide (What should I watch next?)
-The Intelligence Engine powers your night:
-- **Decision Wizard:** Filter by Mood, Available Time, and Solo/Group watching.
-- **"What Am I Missing?":** Instantly find remaining unwatched titles in a beloved franchise.
-- **Smart Queue & Surprise Me:** Intelligent, weighted suggestions rather than pure random selections.
+1. Install dependencies in both directories:
 
----
+   ```sh
+   npm ci
+   cd backend
+   npm ci
+   cd ..
+   ```
 
-## 🛠 Tech Stack & Architecture
+2. Copy `.env.example` to `.env` and `backend/.env.example` to `backend/.env`.
 
-- **Frontend:** React, TypeScript, Vite, Tailwind CSS, Framer Motion, Zustand.
-- **Backend:** Node.js, Express, TypeScript.
-- **Database:** PostgreSQL (via Prisma ORM).
-- **Authentication:** Firebase (Email + Google Auth) synced with Postgres JWTs.
-- **Catalog Data:** The Movie Database (TMDB) v3 API.
+   - Frontend: fill in the public Firebase app configuration.
+   - Backend: set `DATABASE_URL`, `FIREBASE_PROJECT_ID`, and your TMDB v3 API key in `TMDB_ACCESS_TOKEN`.
+   - Set `FRONTEND_ORIGIN` to the frontend origin. Locally it defaults to `http://localhost:5173`.
+   - AniList catalog browsing needs no credential. Keep backend credentials out of frontend variables and Git.
 
----
+3. Start PostgreSQL:
 
-## 📚 Project Documentation
-
-For contributors and AI agents working on this project, please refer to the core documentation files in the root directory:
-- [`PROJECT.md`](./PROJECT.md) - High-level overview, tech stack, and critical local environment quirks.
-- [`PROJECT_PLAN.md`](./PROJECT_PLAN.md) - The master roadmap spanning Phase 0 to Phase 7+.
-- [`PROJECT_PHASE.md`](./PROJECT_PHASE.md) - Details on the *current* development sprint and immediate tasks.
-- [`API_CONTRACTS.md`](./API_CONTRACTS.md) - REST API documentation and payloads.
-- [`UI_UX_GUIDELINES.md`](./UI_UX_GUIDELINES.md) - Scenic's cinematic "Soft Dark" design system.
-- [`DATABASE_SCHEMA.md`](./DATABASE_SCHEMA.md) - Postgres schema and the Personal Entertainment Graph data model.
-
----
-
-## 🚀 Local Setup Instructions
-
-1. **Install Dependencies**
-   Run `npm ci` in the repository root, and `npm ci` inside the `backend/` directory.
-   
-2. **Environment Variables**
-   Copy `.env.example` to `.env` (frontend) and `backend/.env.example` to `backend/.env` (backend). 
-   - Add your **TMDB v3 API Key** (32-character string).
-   - Add your Firebase configuration keys.
-
-3. **Start the Database**
-   Start PostgreSQL via Docker. (Note: Scenic maps Postgres to local port `5433` to avoid conflicts with native Windows Postgres instances).
-   ```bash
+   ```sh
    docker compose up -d db
    ```
 
-4. **Initialize Prisma (Crucial)**
-   Always run Prisma commands locally in the backend folder to bypass global v8 conflicts:
-   ```bash
+4. Initialize a **new, empty** database:
+
+   ```sh
    cd backend
    npx prisma generate
-   npx prisma db push
+   npm run migrate:deploy
    ```
 
-5. **Start the Development Servers**
-   In the `backend/` directory, start the API:
-   ```bash
-   npm run dev
-   ```
-   In the repository root, start the Vite frontend:
-   ```bash
-   npm run dev
-   ```
+   If your database was previously initialized with `prisma db push`, follow the baseline procedure in [Deployment](docs/DEPLOYMENT.md) before applying migrations. The existing local development database has already been upgraded.
 
-*(Note: The backend development script uses `NODE_TLS_REJECT_UNAUTHORIZED=0` to bypass SSL certificate errors common on local Windows environments when connecting to TMDB).*
+5. Start the API from `backend` with `npm run dev`. In a second terminal, start the frontend from the repository root with `npm run dev`.
+
+Open `http://localhost:5173`; the API listens on port `3000`. Vite proxies `/api` to the Node backend. For a separately hosted backend, set `VITE_API_BASE_URL=https://YOUR-NODE-HOST/api/v1` before the frontend build.
+
+The backend uses Node's system certificate store while keeping HTTPS verification enabled. On Windows, stop a running backend before regenerating Prisma if its engine DLL is locked.
+
+For this workspace's existing isolated PostgreSQL 18 cluster, the local restart command is:
+
+```powershell
+& 'C:\Program Files\PostgreSQL\18\bin\pg_ctl.exe' -D 'backend/.local/postgres' -l 'backend/.local/postgres.log' -o '-p 5433' start
+```
+
+Cluster files are ignored by Git; this command assumes that cluster already exists.
+
+## Validation
+
+From the repository root:
+
+```sh
+npm run build
+npm run lint
+```
+
+From `backend`:
+
+```sh
+npm run build
+npm test
+npx prisma migrate status
+```
+
+The signed-in browser workflow verified movie/anime saves across refresh, rating edits, TV/anime progress, filtering, rating sorting, and removal. Migrations were also verified on a fresh temporary database.
+
+## Deployment and monitoring
+
+See [Deployment instructions](docs/DEPLOYMENT.md) for production variables, migrations, the backend Docker image, frontend hosting, and monitoring configuration. `/api/v1/health` checks the process; `/api/v1/ready` also checks PostgreSQL. Hosting, external alert destinations, and database backups must be configured for the chosen deployment.
+
+## Project documents
+
+- [Project overview](PROJECT.md)
+- [Roadmap](PROJECT_PLAN.md)
+- [Current phase](PROJECT_PHASE.md)
+- [API contracts](API_CONTRACTS.md)
+- [UI guidelines](UI_UX_GUIDELINES.md)
+- [Database design](DATABASE_SCHEMA.md)
+- [Development blueprint](docs/PROJECT_BLUEPRINT.md)
+
+The roadmap and design documents describe the wider planned product; the current-features list above describes the implemented application.

@@ -20,6 +20,8 @@ model User {
   // Relations
   watchlists          WatchlistItem[]
   history             HistoryItem[]
+  animeWatchlists      AnimeWatchlistItem[]
+  animeHistory         AnimeHistoryItem[]
 
   @@map("users")
 }
@@ -43,10 +45,38 @@ model HistoryItem {
   tmdbId    Int
   mediaType String   // "movie" or "tv"
   rating    Int?     // 1-10
+  status    String   @default("completed")
+  season    Int?
+  episode   Int?
   watchedAt DateTime @default(now())
   
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, tmdbId, mediaType])
   @@map("history_items")
+}
+
+model AnimeWatchlistItem {
+  id        String   @id @default(uuid())
+  userId    String
+  anilistId Int
+  addedAt   DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, anilistId])
+  @@map("anime_watchlist_items")
+}
+
+model AnimeHistoryItem {
+  id        String   @id @default(uuid())
+  userId    String
+  anilistId Int
+  rating    Int?
+  status    String   @default("completed")
+  episodesWatched Int @default(0)
+  watchedAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, anilistId])
+  @@map("anime_history_items")
 }

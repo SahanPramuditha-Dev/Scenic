@@ -6,6 +6,7 @@ import { api } from '../services/api';
 import type { CanonicalMedia } from '../lib/types';
 import { useLibraryData, type LibraryItem } from '../lib/library';
 import { MediaCard } from '../components/MediaCard';
+import { LibraryCard } from '../components/LibraryCard';
 import { NavBar } from '../components/NavBar';
 
 type TimeWindow = 'day' | 'week';
@@ -22,16 +23,13 @@ function PersonalRow({ title, items, emptyText }: { title: string; items: Librar
       </div>
       {items.length ? (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
-          {items.slice(0, 6).map((item) => item.media ? (
-            <MediaCard key={item.id} media={item.media} />
-          ) : (
-            <Link key={item.id} to={`/media/${item.mediaType}/${item.tmdbId}`} className="flex aspect-[2/3] items-end rounded-xl border border-zinc-800 bg-zinc-900 p-4 text-sm text-zinc-300 hover:border-indigo-500">
-              {item.mediaType === 'movie' ? 'Movie' : 'Series'} #{item.tmdbId}
-            </Link>
-          ))}
+          {items.slice(0, 6).map((item) => <LibraryCard key={item.id} item={item} />)}
         </div>
       ) : (
-        <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6 text-sm text-zinc-400">{emptyText}</div>
+        <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6 text-sm text-zinc-400">
+          <span>{emptyText}</span>
+          <div className="flex flex-wrap gap-3"><Link to="/search" className="rounded-lg bg-indigo-600 px-4 py-2 font-semibold text-white hover:bg-indigo-500">Browse movies & TV</Link><Link to="/anime" className="rounded-lg border border-zinc-700 px-4 py-2 font-semibold text-white hover:bg-zinc-800">Explore anime</Link></div>
+        </div>
       )}
     </section>
   );
@@ -53,7 +51,7 @@ export default function HomePage() {
   const heroMedia = trending?.find((item) => item.backdropPath) ?? trending?.[0];
   const gridMedia = (trending ?? []).filter((item) =>
     item.id !== heroMedia?.id && (mediaFilter === 'all' || item.mediaType === mediaFilter)
-  );
+  ).slice(0, 18);
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-zinc-100">
@@ -77,7 +75,7 @@ export default function HomePage() {
       ) : (
         <main>
           {heroMedia ? (
-            <section className="relative flex min-h-[68vh] items-end overflow-hidden pb-14 pt-32 sm:min-h-[74vh] sm:pb-20">
+            <section className="relative flex min-h-[52vh] items-end overflow-hidden pb-10 pt-28 sm:min-h-[56vh] sm:pb-14">
               <div className="absolute inset-0" aria-hidden="true">
                 {heroMedia.backdropPath ? (
                   <img src={`https://image.tmdb.org/t/p/original${heroMedia.backdropPath}`} alt="" className="h-full w-full object-cover object-center" />
@@ -111,10 +109,13 @@ export default function HomePage() {
             ) : library.isLoading ? (
               <div className="mt-8 h-28 animate-pulse rounded-2xl bg-zinc-900" aria-label="Loading your library" />
             ) : library.data ? (
-              <>
+              library.data.watchlist.length || library.data.history.length ? <>
                 <PersonalRow title="Your watchlist" items={library.data.watchlist} emptyText="Save a title from its detail page to start your watchlist." />
-                <PersonalRow title="Recently watched" items={library.data.history} emptyText="Titles you mark as watched will appear here." />
-              </>
+                <PersonalRow title="Watching & recently watched" items={library.data.history} emptyText="Track a title from your library to record your watching progress." />
+              </> : <div className="mt-8 flex flex-wrap items-center justify-between gap-5 rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6">
+                <div><h2 className="text-lg font-semibold">Start your library</h2><p className="mt-1 text-sm text-zinc-400">Save titles you want to see and mark what you have watched.</p></div>
+                <div className="flex flex-wrap gap-3"><Link to="/search" className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500">Browse movies & TV</Link><Link to="/anime" className="rounded-lg border border-zinc-700 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-800">Explore anime</Link></div>
+              </div>
             ) : null}
 
             <section className="mt-16" aria-labelledby="trending-heading">
@@ -134,6 +135,7 @@ export default function HomePage() {
               {gridMedia.length ? <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
                 {gridMedia.map((media) => <MediaCard key={media.id} media={media} />)}
               </div> : <p className="rounded-xl border border-zinc-800 bg-zinc-900 p-6 text-zinc-400">No titles match this filter right now.</p>}
+              <Link to="/search" className="mt-8 inline-flex items-center gap-2 rounded-xl border border-zinc-700 px-4 py-2 text-sm font-semibold text-zinc-200 hover:bg-zinc-900">Explore more titles <ArrowRight className="h-4 w-4" /></Link>
               <p className="mt-8 text-xs text-zinc-600">Media metadata and artwork provided by TMDB.</p>
             </section>
           </div>

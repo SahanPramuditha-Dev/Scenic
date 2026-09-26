@@ -4,7 +4,8 @@ import {
   removeFromWatchlist, 
   getWatchlist,
   addToHistory,
-  getHistory
+  getHistory,
+  removeFromHistory
 } from './tracking.controller';
 import { requireAuth } from '../auth/auth.middleware';
 
@@ -19,5 +20,6 @@ router.get('/watchlist', getWatchlist);
 // History routes
 router.post('/history', addToHistory);
 router.get('/history', getHistory);
+router.delete('/history', removeFromHistory);
 
 export default router;

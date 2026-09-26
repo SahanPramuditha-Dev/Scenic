@@ -8,3 +8,11 @@ body {
   background-color: var(--color-scenic-dark);
   color: white;
 }
+
+.cast-scroll {
+  scrollbar-width: none;
+}
+
+.cast-scroll::-webkit-scrollbar {
+  display: none;
+}
