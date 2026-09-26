@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import prisma from '../../config/prisma';
 import { getOrCreateUser } from '../users/users.controller';
+import { historyFields } from './history-input';
 
 function trackingInput(body: unknown): { tmdbId: number; mediaType: 'movie' | 'tv' } | null {
   if (!body || typeof body !== 'object') return null;
@@ -62,21 +63,32 @@ export const getWatchlist = async (req: Request, res: Response) => {
 export const addToHistory = async (req: Request, res: Response) => {
   const input = trackingInput(req.body);
   if (!input) return res.status(400).json({ error: 'Valid tmdbId and mediaType are required' });
-  const rating = (req.body as Record<string, unknown>).rating;
-  if (rating !== undefined && (!Number.isInteger(rating) || (rating as number) < 1 || (rating as number) > 10)) {
-    return res.status(400).json({ error: 'rating must be an integer from 1 to 10' });
-  }
+  let fields;
+  try { fields = historyFields(req.body, input.mediaType); }
+  catch (error) { return res.status(400).json({ error: (error as Error).message }); }
   try {
     const ownerId = await userId(req);
     const item = await prisma.historyItem.upsert({
       where: { userId_tmdbId_mediaType: { userId: ownerId, ...input } },
-      update: { rating: rating as number | undefined, watchedAt: new Date() },
-      create: { userId: ownerId, ...input, rating: rating as number | undefined },
+      update: fields,
+      create: { userId: ownerId, ...input, ...fields },
     });
     return res.status(200).json(item);
   } catch (error) {
     console.error('Failed to add to history:', error);
     return res.status(500).json({ error: 'Failed to add to history' });
+  }
+};
+
+export const removeFromHistory = async (req: Request, res: Response) => {
+  const input = trackingInput(req.body);
+  if (!input) return res.status(400).json({ error: 'Valid tmdbId and mediaType are required' });
+  try {
+    await prisma.historyItem.deleteMany({ where: { userId: await userId(req), ...input } });
+    return res.json({ success: true });
+  } catch (error) {
+    console.error('Failed to remove history:', error);
+    return res.status(500).json({ error: 'Failed to remove history' });
   }
 };
 

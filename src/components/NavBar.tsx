@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Film, LibraryBig, LogOut, Search, User } from 'lucide-react';
+import { Film, LibraryBig, LogOut, Search, Tv, User } from 'lucide-react';
 import { signOut } from 'firebase/auth';
 import { auth } from '../lib/firebase';
 import { useAuthStore } from '../stores/useAuth';
@@ -7,6 +7,7 @@ import { useAuthStore } from '../stores/useAuth';
 const links = [
   { name: 'Home', path: '/home', icon: Film },
   { name: 'Search', path: '/search', icon: Search },
+  { name: 'Anime', path: '/anime', icon: Tv },
   { name: 'Library', path: '/library', icon: LibraryBig },
 ];
 
@@ -37,7 +38,7 @@ export function NavBar() {
         </div>
       </nav>
       <nav className="fixed inset-x-0 bottom-0 z-50 flex items-center justify-around border-t border-white/10 bg-[#0a0a0a]/95 px-3 py-2 backdrop-blur-xl md:hidden" aria-label="Mobile navigation">
-        {links.map(({ name, path, icon: Icon }) => <Link key={path} to={path} aria-current={location.pathname === path ? 'page' : undefined} className={`flex min-w-20 flex-col items-center gap-1 rounded-lg px-3 py-1 text-xs ${location.pathname === path ? 'text-indigo-300' : 'text-zinc-400'}`}><Icon className="h-5 w-5" />{name}</Link>)}
+        {links.map(({ name, path, icon: Icon }) => <Link key={path} to={path} aria-current={location.pathname === path ? 'page' : undefined} className={`flex min-w-0 flex-1 flex-col items-center gap-1 rounded-lg px-2 py-1 text-xs ${location.pathname === path ? 'text-indigo-300' : 'text-zinc-400'}`}><Icon className="h-5 w-5" />{name}</Link>)}
       </nav>
     </>
   );

@@ -1,10 +1,12 @@
-import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
+import { Link, useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Play, Plus, Check, Star, Clock, Calendar } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Plus, Check, Star, Clock, Calendar } from 'lucide-react';
 import { useAuthStore } from '../stores/useAuth';
 import type { CanonicalMedia } from '../lib/types';
 import { useQueryClient } from '@tanstack/react-query';
+import { NavBar } from '../components/NavBar';
+import { api } from '../services/api';
 
 type MediaDetails = CanonicalMedia & {
   runtime?: number;
@@ -22,34 +24,24 @@ export default function MediaDetailPage() {
   const [inWatchlist, setInWatchlist] = useState(false);
   const [isWatched, setIsWatched] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [statusMessage, setStatusMessage] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const castRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const fetchDetails = async () => {
       try {
-        const token = await user?.getIdToken();
-        const res = await fetch(`/api/v1/media/${mediaType}/${id}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        if (!res.ok) throw new Error('Failed to load media');
-        const data: MediaDetails = await res.json();
+        const data = (await api.get<MediaDetails>(`/media/${mediaType}/${id}`)).data;
         setMedia(data);
         
         // Also fetch watchlist and history status to see if it's already added
         // (In a full app we'd fetch the user's lists and store in Zustand, but we can query them directly here for now)
         if (user?.uid) {
-          const wlRes = await fetch('/api/v1/tracking/watchlist', {
-             headers: { Authorization: `Bearer ${token}` }
-          });
-          if (!wlRes.ok) throw new Error('Failed to load watchlist');
-          const wlData: { tmdbId: number; mediaType: string }[] = await wlRes.json();
+          const wlData = (await api.get<{ tmdbId: number; mediaType: string }[]>('/tracking/watchlist')).data;
           setInWatchlist(wlData.some((item) => item.tmdbId === data.tmdbId && item.mediaType === data.mediaType));
           
-          const histRes = await fetch('/api/v1/tracking/history', {
-             headers: { Authorization: `Bearer ${token}` }
-          });
-          if (!histRes.ok) throw new Error('Failed to load history');
-          const histData: { tmdbId: number; mediaType: string }[] = await histRes.json();
-          setIsWatched(histData.some((item) => item.tmdbId === data.tmdbId && item.mediaType === data.mediaType));
+          const histData = (await api.get<{ tmdbId: number; mediaType: string; status: string }[]>('/tracking/history')).data;
+          setIsWatched(histData.some((item) => item.tmdbId === data.tmdbId && item.mediaType === data.mediaType && item.status === 'completed'));
         }
 
       } catch (e) {
@@ -63,65 +55,60 @@ export default function MediaDetailPage() {
   }, [id, mediaType, user]);
 
   const handleToggleWatchlist = async () => {
-    if (!user || !media) return;
+    if (!user || !media || isSaving) return;
+    setIsSaving(true);
+    setErrorMessage('');
+    setStatusMessage('');
     try {
-      const token = await user.getIdToken();
-      
       if (inWatchlist) {
-        const response = await fetch('/api/v1/tracking/watchlist', {
-          method: 'DELETE',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ tmdbId: media.tmdbId, mediaType: media.mediaType })
-        });
-        if (!response.ok) throw new Error('Failed to remove from watchlist');
+        await api.delete('/tracking/watchlist', { data: { tmdbId: media.tmdbId, mediaType: media.mediaType } });
         setInWatchlist(false);
+        setStatusMessage('Removed from your watchlist.');
         void queryClient.invalidateQueries({ queryKey: ['library'] });
       } else {
-        const response = await fetch('/api/v1/tracking/watchlist', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ tmdbId: media.tmdbId, mediaType: media.mediaType })
-        });
-        if (!response.ok) throw new Error('Failed to add to watchlist');
+        await api.post('/tracking/watchlist', { tmdbId: media.tmdbId, mediaType: media.mediaType });
         setInWatchlist(true);
+        setStatusMessage('Saved to your watchlist.');
         void queryClient.invalidateQueries({ queryKey: ['library'] });
       }
     } catch (e) {
       console.error(e);
       setErrorMessage('Could not update watchlist. Please try again.');
+    } finally {
+      setIsSaving(false);
     }
   };
 
   const handleToggleWatched = async () => {
-    if (!user || !media) return;
+    if (!user || !media || isSaving) return;
+    setIsSaving(true);
+    setErrorMessage('');
+    setStatusMessage('');
     try {
-      const token = await user.getIdToken();
       if (!isWatched) {
-        const response = await fetch('/api/v1/tracking/history', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ tmdbId: media.tmdbId, mediaType: media.mediaType })
-        });
-        if (!response.ok) throw new Error('Failed to add to history');
+        await api.post('/tracking/history', { tmdbId: media.tmdbId, mediaType: media.mediaType, status: 'completed' });
         setIsWatched(true);
+        setStatusMessage('Marked as watched.');
         void queryClient.invalidateQueries({ queryKey: ['library'] });
         // Usually, if you watch it, you might want to remove it from watchlist, but we'll keep it simple
       }
     } catch (e) {
       console.error(e);
       setErrorMessage('Could not update watch history. Please try again.');
+    } finally {
+      setIsSaving(false);
     }
   };
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#131316] flex items-center justify-center text-zinc-400">
+      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center text-zinc-400"><NavBar />
         <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
   }
 
-  if (!media) return <div className="min-h-screen bg-[#131316] text-white flex items-center justify-center">{errorMessage || 'Not found'}</div>;
+  if (!media) return <div className="min-h-screen bg-[#0a0a0a] text-white flex items-center justify-center"><NavBar />{errorMessage || 'Not found'}</div>;
 
   const backdropUrl = media.backdropPath ? `https://image.tmdb.org/t/p/original${media.backdropPath}` : null;
   const posterUrl = media.posterPath ? `https://image.tmdb.org/t/p/w500${media.posterPath}` : null;
@@ -131,30 +118,32 @@ export default function MediaDetailPage() {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="min-h-screen bg-[#131316] text-zinc-100 overflow-x-hidden"
+      className="min-h-screen bg-[#0a0a0a] text-zinc-100 overflow-x-hidden"
     >
+      <NavBar />
       {/* Hero Backdrop */}
-      <div className="relative h-[60vh] w-full">
+      <div className="relative h-[38vh] w-full sm:h-[42vh]">
         {backdropUrl ? (
           <img src={backdropUrl} alt={media.title} className="w-full h-full object-cover" />
         ) : (
           <div className="w-full h-full bg-zinc-900"></div>
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-[#131316] via-[#131316]/60 to-transparent"></div>
-        <div className="absolute inset-0 bg-gradient-to-r from-[#131316] via-[#131316]/40 to-transparent"></div>
+        <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/60 to-transparent"></div>
+        <div className="absolute inset-0 bg-gradient-to-r from-[#0a0a0a] via-[#0a0a0a]/40 to-transparent"></div>
         
         {/* Back button */}
         <button 
           onClick={() => navigate(-1)}
-          className="absolute top-8 left-8 p-3 bg-black/40 hover:bg-black/60 backdrop-blur-md rounded-full text-white transition-colors"
+          aria-label="Go back"
+          className="absolute top-24 left-5 rounded-full bg-black/50 p-3 text-white backdrop-blur-md transition-colors hover:bg-black/70 sm:left-8"
         >
           <ArrowLeft className="w-5 h-5" />
         </button>
       </div>
 
       {/* Content */}
-      <div className="max-w-[1400px] mx-auto px-8 relative -mt-[20vh] pb-24">
-        <div className="flex flex-col md:flex-row gap-10">
+      <div className="relative mx-auto -mt-[14vh] max-w-[1400px] px-5 pb-24 sm:px-8">
+        <div className="flex flex-col gap-8 md:flex-row lg:gap-10">
           
           {/* Poster */}
           <div className="shrink-0 w-64 hidden md:block">
@@ -166,8 +155,9 @@ export default function MediaDetailPage() {
           </div>
 
           {/* Details */}
-          <div className="flex-1 pt-4">
+          <div className="min-w-0 flex-1 pt-4">
             {errorMessage && <p role="alert" className="mb-4 text-red-400">{errorMessage}</p>}
+            {statusMessage && <p role="status" className="mb-4 text-emerald-300">{statusMessage}</p>}
             <h1 className="text-5xl font-bold tracking-tight mb-2">{media.title}</h1>
             {media.originalTitle && media.originalTitle !== media.title && (
               <p className="text-zinc-500 text-lg mb-4">{media.originalTitle}</p>
@@ -189,7 +179,7 @@ export default function MediaDetailPage() {
               {media.voteAverage ? (
                 <div className="flex items-center gap-1.5 bg-zinc-900/50 px-3 py-1.5 rounded-full border border-zinc-800/50">
                   <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
-                  {media.voteAverage.toFixed(1)}
+                  TMDB {media.voteAverage.toFixed(1)}/10
                 </div>
               ) : null}
               <div className="px-3 py-1.5 rounded-full border border-zinc-700 text-zinc-300 uppercase tracking-wider text-[10px]">
@@ -198,12 +188,9 @@ export default function MediaDetailPage() {
             </div>
 
             <div className="flex flex-wrap items-center gap-4 mb-10">
-              <button className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-3 rounded-xl font-semibold transition-all shadow-[0_0_20px_-5px_rgba(79,70,229,0.4)]">
-                <Play className="w-5 h-5 fill-white" /> Play Trailer
-              </button>
-              
               <button 
                 onClick={handleToggleWatchlist}
+                disabled={isSaving}
                 className={`flex items-center gap-2 px-6 py-3 rounded-xl font-semibold transition-all border ${
                   inWatchlist 
                     ? 'bg-zinc-800 border-zinc-700 text-white hover:bg-zinc-700' 
@@ -211,12 +198,12 @@ export default function MediaDetailPage() {
                 }`}
               >
                 {inWatchlist ? <Check className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
-                {inWatchlist ? 'In Watchlist' : 'Watchlist'}
+                {inWatchlist ? 'Saved to watchlist' : 'Add to watchlist'}
               </button>
 
               <button 
                 onClick={handleToggleWatched}
-                disabled={isWatched}
+                disabled={isWatched || isSaving}
                 className={`flex items-center gap-2 px-6 py-3 rounded-xl font-semibold transition-all border ${
                   isWatched 
                     ? 'bg-green-500/10 border-green-500/20 text-green-400' 
@@ -228,6 +215,7 @@ export default function MediaDetailPage() {
               </button>
             </div>
 
+            <Link to="/library" className="mb-8 inline-flex items-center gap-2 text-sm text-indigo-300 hover:text-white">Manage your rating{media.mediaType === 'tv' ? ' and episode progress' : ''} in Library <ArrowRight className="h-4 w-4" /></Link>
             <div className="mb-10">
               <h3 className="text-xl font-semibold mb-3 text-zinc-200">Overview</h3>
               <p className="text-zinc-400 leading-relaxed max-w-3xl text-lg">
@@ -249,8 +237,11 @@ export default function MediaDetailPage() {
 
             {media.cast && media.cast.length > 0 && (
               <div>
-                <h3 className="text-xl font-semibold mb-4 text-zinc-200">Top Cast</h3>
-                <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
+                <div className="mb-4 flex items-center justify-between gap-3">
+                  <div><h3 className="text-xl font-semibold text-zinc-200">Top Cast</h3><p className="mt-1 text-xs text-zinc-500">Scroll to see more cast</p></div>
+                  <div className="flex gap-2"><button type="button" onClick={() => castRef.current?.scrollBy({ left: -408, behavior: 'smooth' })} aria-label="Scroll cast left" className="rounded-full border border-zinc-700 p-2 text-zinc-300 hover:bg-zinc-800"><ArrowLeft className="h-4 w-4" /></button><button type="button" onClick={() => castRef.current?.scrollBy({ left: 408, behavior: 'smooth' })} aria-label="Scroll cast right" className="rounded-full border border-zinc-700 p-2 text-zinc-300 hover:bg-zinc-800"><ArrowRight className="h-4 w-4" /></button></div>
+                </div>
+                <div ref={castRef} tabIndex={0} aria-label="Top cast" className="cast-scroll flex max-w-full gap-4 overflow-x-auto scroll-smooth pb-4">
                   {media.cast.map((actor) => (
                     <div key={actor.id} className="w-[120px] shrink-0">
                       <div className="w-full aspect-[2/3] bg-zinc-800 rounded-lg mb-2 overflow-hidden border border-zinc-800/50">

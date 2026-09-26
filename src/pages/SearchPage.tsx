@@ -21,6 +21,12 @@ export default function SearchPage() {
     },
     staleTime: 5 * 60 * 1000,
   });
+  const trending = useQuery<CanonicalMedia[]>({
+    queryKey: ['trending', 'day'],
+    enabled: !query,
+    queryFn: async () => (await api.get<{ results: CanonicalMedia[] }>('/media/trending?timeWindow=day')).data.results,
+    staleTime: 5 * 60 * 1000,
+  });
   const results = (search.data ?? []).filter((item) => type === 'all' || item.mediaType === type);
 
   const submit = (event: FormEvent) => {
@@ -58,7 +64,10 @@ export default function SearchPage() {
             <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">{results.map((media) => <MediaCard key={media.id} media={media} />)}</div>
           ) : <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-6 text-zinc-400">No titles found. Try another search or filter.</div>}
         </>}
-        {!query && <div className="mt-14 rounded-2xl border border-zinc-800 bg-zinc-900/60 p-8 text-zinc-400">Search by title to explore the catalog.</div>}
+        {!query && <section className="mt-14">
+          <h2 className="mb-6 text-2xl font-semibold">Trending now</h2>
+          {trending.isLoading ? <p className="text-zinc-400">Loading titles…</p> : trending.isError ? <div role="alert" className="rounded-xl border border-red-500/30 bg-red-950/20 p-5 text-red-300">Trending titles could not be loaded. <button onClick={() => void trending.refetch()} className="underline">Retry</button>.</div> : <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">{trending.data?.map((media) => <MediaCard key={media.id} media={media} />)}</div>}
+        </section>}
       </main>
     </div>
   );

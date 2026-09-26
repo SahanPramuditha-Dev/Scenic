@@ -7,7 +7,7 @@ export const getTrending = async (req: Request, res: Response) => {
     const trending = await TmdbService.getTrending(timeWindow);
     return res.json({ results: trending });
   } catch (error: unknown) {
-    console.error('Error fetching trending media:', error);
+    console.error('Error fetching trending media:', error instanceof Error ? error.message : 'Unknown error');
     return res.status(500).json({ error: 'Failed to fetch trending media' });
   }
 };
@@ -24,7 +24,7 @@ export const searchMedia = async (req: Request, res: Response) => {
     const results = await TmdbService.searchMulti(query, page);
     return res.json({ results });
   } catch (error: unknown) {
-    console.error('Error searching media:', error);
+    console.error('Error searching media:', error instanceof Error ? error.message : 'Unknown error');
     return res.status(500).json({ error: 'Failed to search media' });
   }
 };
@@ -42,7 +42,7 @@ export const getDetails = async (req: Request, res: Response) => {
     const details = await TmdbService.getDetails(parsedId, mediaType as 'movie' | 'tv');
     return res.json(details);
   } catch (error: unknown) {
-    console.error('Error fetching details:', error);
+    console.error('Error fetching details:', error instanceof Error ? error.message : 'Unknown error');
     return res.status(500).json({ error: 'Failed to fetch details' });
   }
 };
